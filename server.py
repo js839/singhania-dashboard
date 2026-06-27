@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 import getpass
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -22,7 +25,10 @@ PORT = 8787
 TODAY = date.today()
 ROOT = Path(__file__).resolve().parent
 SESSIONS: dict[str, dict] = {}
-DB_PASSWORD = os.environ.get("SUPABASE_DB_PASSWORD") or getpass.getpass("Supabase DB password: ")
+DB_PASSWORD = os.environ.get("SUPABASE_DB_PASSWORD")
+if not DB_PASSWORD and __name__ == "__main__":
+    DB_PASSWORD = getpass.getpass("Supabase DB password: ")
+SESSION_SECRET = os.environ.get("SESSION_SECRET") or DB_PASSWORD or "local-dev-session-secret"
 
 
 def parse_date(value):
@@ -254,6 +260,8 @@ def incentive_slab(total_retail):
 
 
 def db():
+    if not DB_PASSWORD:
+        raise RuntimeError("SUPABASE_DB_PASSWORD environment variable is required")
     return psycopg2.connect(
         dbname="postgres",
         user="postgres",
@@ -263,6 +271,33 @@ def db():
         sslmode="require",
         connect_timeout=10,
     )
+
+
+def _b64_encode(data):
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+
+def _b64_decode(text):
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def make_session_token(user):
+    payload = _b64_encode(json.dumps(user, separators=(",", ":"), default=str).encode("utf-8"))
+    signature = hmac.new(SESSION_SECRET.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).digest()
+    return f"{payload}.{_b64_encode(signature)}"
+
+
+def read_session_token(token):
+    if not token or "." not in token:
+        return None
+    payload, signature = token.rsplit(".", 1)
+    expected = _b64_encode(hmac.new(SESSION_SECRET.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).digest())
+    if not hmac.compare_digest(signature, expected):
+        return None
+    try:
+        return json.loads(_b64_decode(payload).decode("utf-8"))
+    except Exception:
+        return None
 
 
 def password_matches(stored, entered):

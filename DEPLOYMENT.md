@@ -2,54 +2,52 @@
 
 ## What To Deploy
 
-This project has two parts:
+This project can run on Vercel as one app:
 
-- React frontend: deploy this folder to Vercel.
-- Python backend: deploy `server.py` to a Python hosting service such as Render, Railway, Fly.io, or a VPS.
-
-Vercel is excellent for the React frontend. The current backend is a long-running Python HTTP server, so it should run on a backend host unless it is converted to Vercel serverless functions.
+- React frontend is built with Vite.
+- `/api/login` and `/api/report` run as Vercel Python serverless functions.
+- The same `server.py` still works for local development.
 
 ## Environment Variables
 
-Backend host:
+Vercel:
 
 ```bash
 SUPABASE_DB_PASSWORD=your-supabase-db-password
+SESSION_SECRET=any-long-random-secret
 ```
 
-Frontend/Vercel:
+Leave `VITE_API_BASE` empty on Vercel. The frontend will call same-domain `/api/login` and `/api/report`.
 
-```bash
-VITE_API_BASE=https://your-backend-domain.example.com
-```
+## Vercel Steps
 
-## Vercel Frontend Steps
-
-1. Push `outputs/singhania-react-vscode` to GitHub.
+1. Push the contents of this folder to GitHub.
 2. In Vercel, import the GitHub repo.
 3. Set framework to `Vite`.
 4. Build command: `npm run build`.
 5. Output directory: `dist`.
-6. Add `VITE_API_BASE` in Vercel Environment Variables.
-7. Deploy.
+6. Add `SUPABASE_DB_PASSWORD` and `SESSION_SECRET` in Vercel Environment Variables.
+7. Make sure the Vercel project root is the folder that contains `package.json`.
+8. Deploy.
 
-## Backend Steps
+## If Your GitHub Repo Has This Folder Inside Another Folder
 
-1. Upload this same project or at least `server.py` plus required Python dependencies to a backend host.
-2. Install Python dependency:
-
-```bash
-pip install psycopg2-binary
-```
-
-3. Set `SUPABASE_DB_PASSWORD` as a secret environment variable.
-4. Start command:
+Set Vercel Project Settings -> Root Directory to:
 
 ```bash
-python server.py
+outputs/singhania-react-vscode
 ```
 
-5. Use the backend public URL as `VITE_API_BASE` in Vercel.
+If the GitHub repo already contains the files directly at root, leave Root Directory blank.
+
+## Local Development
+
+```bash
+npm install
+python3 -m pip install psycopg2-binary
+python3 server.py
+npm run dev
+```
 
 ## Real-Time Data
 

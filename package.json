@@ -8,11 +8,14 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-react": "4.3.4",
     "html2canvas": "^1.4.1",
-    "react": "latest",
-    "react-dom": "latest",
-    "vite": "latest"
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "vite": "5.4.11"
   }
 }
