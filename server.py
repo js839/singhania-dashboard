@@ -16,8 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-import psycopg2
-import psycopg2.extras
+import pg8000.dbapi
 
 
 HOST = "127.0.0.1"
@@ -262,15 +261,26 @@ def incentive_slab(total_retail):
 def db():
     if not DB_PASSWORD:
         raise RuntimeError("SUPABASE_DB_PASSWORD environment variable is required")
-    return psycopg2.connect(
-        dbname="postgres",
+    return pg8000.dbapi.connect(
+        database="postgres",
         user="postgres",
         password=DB_PASSWORD,
         host="db.lstyimmqzkskwvcrytev.supabase.co",
         port=5432,
-        sslmode="require",
-        connect_timeout=10,
+        ssl_context=True,
+        timeout=10,
     )
+
+
+def dict_rows(cur):
+    columns = [item[0] for item in (cur.description or [])]
+    return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+
+def dict_one(cur):
+    columns = [item[0] for item in (cur.description or [])]
+    row = cur.fetchone()
+    return dict(zip(columns, row)) if row else None
 
 
 def _b64_encode(data):
@@ -314,12 +324,12 @@ def password_matches(stored, entered):
 
 
 def authenticate(email, password):
-    with db() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with db() as conn, conn.cursor() as cur:
         cur.execute(
             'select "Email", "Name", "Password", "Brand", "Location" from public."User Access" where lower("Email") = lower(%s) limit 1',
             (email,),
         )
-        user = cur.fetchone()
+        user = dict_one(cur)
     if not user or not password_matches(user.get("Password"), password):
         return None
     return {
@@ -332,7 +342,7 @@ def authenticate(email, password):
 
 def fetch_table(cur, table):
     cur.execute(f'select * from public."{table}"')
-    return list(cur.fetchall())
+    return dict_rows(cur)
 
 
 def brand_ok(row, selected_brand):
@@ -701,14 +711,14 @@ def build_report(user, selected_brand, filters=None, report_type="location"):
     if selected_brand not in user["brands"]:
         raise ValueError("Brand is not allowed for this user")
 
-    with db() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with db() as conn, conn.cursor() as cur:
         leads = fetch_table(cur, "Singhania_Leads")
         bookings = fetch_table(cur, "Singhania_Bookings")
         retails = fetch_table(cur, "Singhania_Retails")
         targets = fetch_table(cur, "Sales Target")
         sc_rows = fetch_table(cur, "Singhania SC Data")
         cur.execute('select * from public.singhania_cancellation')
-        cancellations = list(cur.fetchall())
+        cancellations = dict_rows(cur)
 
     allowed_locations = user["locations"]
     leads = [r for r in leads if brand_ok(r, selected_brand) and location_ok(r, allowed_locations, lead=True)]

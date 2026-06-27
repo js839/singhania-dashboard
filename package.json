@@ -9,7 +9,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",
