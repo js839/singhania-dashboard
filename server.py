@@ -14,7 +14,7 @@ from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 HOST = "127.0.0.1"
 PORT = 8787
@@ -22,6 +22,7 @@ TODAY = date.today()
 ROOT = Path(__file__).resolve().parent
 SESSIONS: dict[str, dict] = {}
 DB_PASSWORD = os.environ.get("SUPABASE_DB_PASSWORD")
+DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DATABASE_URL")
 if not DB_PASSWORD and __name__ == "__main__":
     DB_PASSWORD = getpass.getpass("Supabase DB password: ")
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or DB_PASSWORD or "local-dev-session-secret"
@@ -256,10 +257,24 @@ def incentive_slab(total_retail):
 
 
 def db():
-    if not DB_PASSWORD:
-        raise RuntimeError("SUPABASE_DB_PASSWORD environment variable is required")
     import pg8000.dbapi
 
+    if DATABASE_URL:
+        parsed = urlparse(DATABASE_URL)
+        if not parsed.hostname or not parsed.username or parsed.password is None:
+            raise RuntimeError("DATABASE_URL is invalid. URL-encode special characters in the password.")
+        return pg8000.dbapi.connect(
+            database=(parsed.path or "/postgres").lstrip("/"),
+            user=unquote(parsed.username),
+            password=unquote(parsed.password),
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            ssl_context=True,
+            timeout=10,
+        )
+
+    if not DB_PASSWORD:
+        raise RuntimeError("DATABASE_URL or SUPABASE_DB_PASSWORD environment variable is required")
     return pg8000.dbapi.connect(
         database="postgres",
         user="postgres",
