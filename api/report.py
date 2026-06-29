@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
+
+API_ROOT = Path(__file__).resolve().parent
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
 
 from _shared import build_report, cors_headers, read_json, read_session_token, send_json
 
@@ -28,4 +34,3 @@ class handler(BaseHTTPRequestHandler):
             send_json(self, report)
         except Exception as exc:
             send_json(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
-
