@@ -16,9 +16,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-import pg8000.dbapi
-
-
 HOST = "127.0.0.1"
 PORT = 8787
 TODAY = date.today()
@@ -261,6 +258,8 @@ def incentive_slab(total_retail):
 def db():
     if not DB_PASSWORD:
         raise RuntimeError("SUPABASE_DB_PASSWORD environment variable is required")
+    import pg8000.dbapi
+
     return pg8000.dbapi.connect(
         database="postgres",
         user="postgres",
