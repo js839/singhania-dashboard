@@ -338,12 +338,14 @@ def password_matches(stored, entered):
 
 
 def authenticate(email, password):
-    with db() as conn, conn.cursor() as cur:
+    with db() as conn:
+        cur = conn.cursor()
         cur.execute(
             'select "Email", "Name", "Password", "Brand", "Location" from public."User Access" where lower("Email") = lower(%s) limit 1',
             (email,),
         )
         user = dict_one(cur)
+        cur.close()
     if not user or not password_matches(user.get("Password"), password):
         return None
     return {
@@ -725,7 +727,8 @@ def build_report(user, selected_brand, filters=None, report_type="location"):
     if selected_brand not in user["brands"]:
         raise ValueError("Brand is not allowed for this user")
 
-    with db() as conn, conn.cursor() as cur:
+    with db() as conn:
+        cur = conn.cursor()
         leads = fetch_table(cur, "Singhania_Leads")
         bookings = fetch_table(cur, "Singhania_Bookings")
         retails = fetch_table(cur, "Singhania_Retails")
@@ -733,6 +736,7 @@ def build_report(user, selected_brand, filters=None, report_type="location"):
         sc_rows = fetch_table(cur, "Singhania SC Data")
         cur.execute('select * from public.singhania_cancellation')
         cancellations = dict_rows(cur)
+        cur.close()
 
     allowed_locations = user["locations"]
     leads = [r for r in leads if brand_ok(r, selected_brand) and location_ok(r, allowed_locations, lead=True)]
