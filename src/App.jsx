@@ -9,6 +9,7 @@ const reportTypes = [
   { key: "model", icon: "◇", label: "Model Wise" },
   { key: "target", icon: "◎", label: "Target Achievement" },
   { key: "incentive", icon: "₹", label: "Incentive" },
+  { key: "stock", icon: "▤", label: "Stock Summary" },
 ];
 
 function logoSrc(brand) {
@@ -195,16 +196,22 @@ function MultiSelect({ label, options, value, onChange, placeholder }) {
 }
 
 function Filters({ report, filters, onChange, onApply, onReset, loading }) {
-  const options = report.filterOptions || { locations: [], sources: [], models: [] };
+  const options = report.filterOptions || { locations: [], sources: [], models: [], colors: [] };
   const usesMonthRange = report.reportType === "target" || report.reportType === "incentive";
+  const isStock = report.reportType === "stock";
+  const usesDateRange = !usesMonthRange && !isStock;
   const set = (key, value) => onChange({ ...filters, [key]: value });
 
   return (
     <section className="filters-panel">
       <div className="filters-title">Filters</div>
-      <div className="filters-grid">
+      <div className={`filters-grid ${isStock ? "stock-filters" : ""}`}>
         <MultiSelect label="Location" options={options.locations} value={filters.location} onChange={(value) => set("location", value)} placeholder="All Locations" />
-        <MultiSelect label="Source" options={options.sources} value={filters.source} onChange={(value) => set("source", value)} placeholder="All Sources" />
+        {isStock ? (
+          <MultiSelect label="Color" options={options.colors || []} value={filters.color} onChange={(value) => set("color", value)} placeholder="All Colors" />
+        ) : (
+          <MultiSelect label="Source" options={options.sources} value={filters.source} onChange={(value) => set("source", value)} placeholder="All Sources" />
+        )}
         <MultiSelect label="Model" options={options.models} value={filters.model} onChange={(value) => set("model", value)} placeholder="All Models" />
         {usesMonthRange ? (
           <>
@@ -217,7 +224,7 @@ function Filters({ report, filters, onChange, onApply, onReset, loading }) {
               <input type="month" value={filters.monthTo || ""} onChange={(event) => set("monthTo", event.target.value)} />
             </div>
           </>
-        ) : (
+        ) : usesDateRange ? (
           <>
             <div className="field">
               <label>From Date</label>
@@ -228,7 +235,7 @@ function Filters({ report, filters, onChange, onApply, onReset, loading }) {
               <input type="date" value={filters.dateTo || ""} onChange={(event) => set("dateTo", event.target.value)} />
             </div>
           </>
-        )}
+        ) : null}
         <div className="filter-actions">
           <button className="primary-btn" onClick={onApply} disabled={loading}>
             {loading ? "Applying..." : "Apply"}

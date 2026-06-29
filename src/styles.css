@@ -434,6 +434,10 @@ main {
   align-items: end;
 }
 
+.filters-grid.stock-filters {
+  grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(190px, 1fr) 190px;
+}
+
 .multi-select {
   position: relative;
 }
