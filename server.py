@@ -29,11 +29,11 @@ DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DATABA
 if not DB_PASSWORD and __name__ == "__main__":
     DB_PASSWORD = getpass.getpass("Supabase DB password: ")
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or DB_PASSWORD or "local-dev-session-secret"
-DEFAULT_STOCK_SHEET_URLS = [
-    "https://docs.google.com/spreadsheets/d/1hSvaBCIKwpVbF2zRez_EIVD0mMksBCVOUGEO75JG7ds/export?format=csv&gid=1290889166",
-    "https://docs.google.com/spreadsheets/d/1iIE7oshotfCsgl9PgFNZ1Z6XvgNJQJ596b8QShmBcWk/export?format=csv&gid=1290889166",
-    "https://docs.google.com/spreadsheets/d/1uIwneIaT97_qza9Pz7zEIsA-KqTQWcdhgQ0ihUdkqhc/export?format=csv&gid=1290889166",
-    "https://docs.google.com/spreadsheets/d/1BFNRX22gvSHF4x1JVjHuFZtqJknDbG4QZoL3XDxYaFk/export?format=csv&gid=1290889166",
+DEFAULT_STOCK_SHEET_SOURCES = [
+    {"brand": "Skoda", "url": "https://docs.google.com/spreadsheets/d/1hSvaBCIKwpVbF2zRez_EIVD0mMksBCVOUGEO75JG7ds/export?format=csv&gid=1290889166"},
+    {"brand": "Hyundai", "url": "https://docs.google.com/spreadsheets/d/1iIE7oshotfCsgl9PgFNZ1Z6XvgNJQJ596b8QShmBcWk/export?format=csv&gid=1290889166"},
+    {"brand": "Hyundai", "url": "https://docs.google.com/spreadsheets/d/1uIwneIaT97_qza9Pz7zEIsA-KqTQWcdhgQ0ihUdkqhc/export?format=csv&gid=1290889166"},
+    {"brand": "MG", "url": "https://docs.google.com/spreadsheets/d/1BFNRX22gvSHF4x1JVjHuFZtqJknDbG4QZoL3XDxYaFk/export?format=csv&gid=1290889166"},
 ]
 
 
@@ -457,7 +457,7 @@ def filter_options(leads, bookings, retails, cancellations, sc_rows=None):
 def stock_sheet_sources():
     configured = os.environ.get("STOCK_SHEET_URLS", "")
     if not configured.strip():
-        return [{"brand": "", "url": url} for url in DEFAULT_STOCK_SHEET_URLS]
+        return DEFAULT_STOCK_SHEET_SOURCES
     sources = []
     for item in re.split(r"[\n,]+", configured):
         text = item.strip()
@@ -484,8 +484,19 @@ def stock_status(row):
     return norm(stock_field(row, "status", "stock status", "vehicle status", "current status", "remarks"))
 
 
+def clean_stock_location(value):
+    text = clean_text(value)
+    if not text:
+        return "Unassigned"
+    text = re.sub(r"\b(mg|skoda|hyundai)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(showroom|stockyard|stock yard)\b", "", text, flags=re.IGNORECASE)
+    text = re.split(r"[-/]", text, maxsplit=1)[0]
+    text = re.sub(r"\b(1s|3s|dnb|rnc)\b", "", text, flags=re.IGNORECASE)
+    return clean_location(text)
+
+
 def stock_location(row):
-    return clean_location(stock_field(row, "location", "sales location", "stock location", "branch", "showroom", "yard"))
+    return clean_stock_location(stock_field(row, "location", "loc", "v location", "sales location", "stock location", "branch", "showroom", "yard"))
 
 
 def stock_model(row):
